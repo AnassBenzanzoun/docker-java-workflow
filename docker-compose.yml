@@ -1,0 +1,66 @@
+version: "3.8"
+services:
+  db01:
+    build: ./docker/db
+    image: anassbenza/db
+    environment:
+      MYSQL_ROOT_PASSWORD: admin123
+      MYSQL_DATABASE: accounts
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin123
+    volumes:
+      - appdata:/var/lib/mysql
+    ports:
+      - 3306:3306
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: db01
+    ports:
+      - 9000:80
+
+  mc01:
+    image: memcached:latest
+    ports:
+      - 11211:11211
+
+  rmq01:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: test
+      RABBITMQ_DEFAULT_PASS: test
+    ports:
+      - 5672:5672
+      - 15672:15672
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
+    environment:
+      - cluster.name=vprofile
+      - node.name=vprofilenode
+      - discovery.type=single-node
+    ports:
+      - 9300:9300
+      - 9200:9200
+  app:
+    build:
+      context: .
+      dockerfile: ./docker/app/Dockerfile
+    image: anassbenza/app
+    ports:
+      - 8080:8080
+    volumes:
+      - appwebdata:/usr/local/tomcat/webapps
+    depends_on:
+      - db01
+      - mc01
+      - rmq01
+      - elasticsearch
+  nginx:
+    build: ./docker/web
+    image: anassbenza/web
+    ports:
+      - 80:80
+volumes:
+  appdata:
+  appwebdata:
